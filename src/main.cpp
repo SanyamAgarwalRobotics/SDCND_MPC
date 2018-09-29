@@ -91,6 +91,48 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
+          double delta = j[1]["steering_angle"];
+          double acceleration = j[1]["throttle"];
+
+          // Incorporate latency in the model , time elapse is 100ms or 0.1sec
+          double time_elapse = 0.1;
+          std::vector<double>current_mea = {px,py,psi,v};
+          std::vector<double>current_actuator_sim = {acceleration,delta};
+
+          // Predict situation after latency
+          std::vector<double>next_Pred = mpc.PredictNextState(current_mea,current_actuator_sim,time_elapse);
+          
+          //convert global coordinates to vehicle coordinates
+          double px_next = next_Pred[0];
+          double py_next = next_Pred[1];
+          double psi_next = next_Pred[2];
+          double v_next = next_Pred[3];
+          double x_diff = 0;
+          double y_diff = 0;
+          Eigen::VectorXd ptsx_vehicle(ptsx.size());
+          ptsx_vehicle.fill(0.0);
+          Eigen::VectorXd ptsy_vehicle(ptsy.size());
+          ptsy_vehicle.fill(0.0);
+
+          for(unsigned int i=0;i<ptsx.size();i++)
+          {
+            x_diff = ptsx[i] - px_next;
+            y_diff = ptsy[i] - py_next;
+
+            ptsx_vehicle[i] = x_diff * cos(-psi_next) - y_diff * sin(-psi_next);
+            ptsy_vehicle[i] = x_diff * sin(-psi_next) + y_diff * cos(-psi_next);
+          }
+
+          auto coeffs = polyfit(ptsx_vehicle,ptsy_vehicle,3);
+
+          double cte = polyeval(coeffs,0);
+          double epsi = -atan(coeffs[1]);
+
+
+          //Create the state vector
+          Eigen::VectorXd state(6);
+          state << 0, 0, 0, v_next, cte, epsi;
+
 
           /*
           * TODO: Calculate steering angle and throttle using MPC.
@@ -98,8 +140,14 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
+          std::vector<double> solution;
           double steer_value;
           double throttle_value;
+
+          solution = mpc.Solve(state,coeffs);
+          steer_value = -1 * solution[0]/deg2rad(25);
+          throttle_value = solution[1];
+
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -113,14 +161,29 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
-
+          for(unsigned int i =2;i<solution.size();i++)
+          {
+            if(i%2==0)
+            {
+              mpc_x_vals.push_back(solution[i]);
+            }
+            else
+            {
+              mpc_y_vals.push_back(solution[i]);
+            }
+          }
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-
+ 
+          for(int i = 0;i < ptsx_vehicle.size();i++)
+          {
+            next_x_vals.push_back(ptsx_vehicle[i]);
+            next_y_vals.push_back(ptsy_vehicle[i]);
+          }
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
 
