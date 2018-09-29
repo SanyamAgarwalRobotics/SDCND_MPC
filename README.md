@@ -60,8 +60,8 @@ The actuator inputs used to control the car are given below:
  Higher value of N ensures more number of estimates while higher value of dt ensures the estimates are closer in time. Different combinations are tried to achieve Na dn dt value mentioned below:
 
 N and dt                                 Observation
-1. N=10,dt=0.1                              At turns car took sharp turns, less number of dicrete points.
-2. N=7,dt=0.07                              Perfect combination for car movement for the track provided to complete this project.  This configuration works well till 90MPH and moderate execution with 100MPH.
+1. N=10,dt=0.1,                               At turns car took sharp turns, due to less number of dicrete points.
+2. N=7,dt=0.07,                               Perfect combination for car movement for the track provided to complete this project.  This configuration works well till 90MPH and moderate execution with 100MPH.
 
 
 After trial and error, N=7 and dt=0.07 means MPC algorithm predicts future for (7*.07 = 500ms) and it is drawn inside simulator with Green color.
