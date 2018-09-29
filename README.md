@@ -1,108 +1,90 @@
 # CarND-Controls-MPC
 Self-Driving Car Engineer Nanodegree Program
 
----
+## Model Predictive Controller
 
-## Dependencies
+MPC is a non-linear system which generates optimized parameters with the constraint of obtaining minimal value of cost function. Here, cost function refers to the problem built by taking into consideration the model of the system, range of inputs, limitations on outputs and/or the effect of external factors acting on the system.
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1(mac, linux), 3.81(Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
+A typical cost function in case of a self-driving vehicle will have following constraints:
+	1. The cross track error (cte), i.e. the distance of vehicle from the center of the lane must be minimal.
+	2. The heading direction of the vehicle must be close to perpendicular to the lane. Error PSI (epsi) is the error in heading direction.
+	3. Oscillations while riding the vehicle must be minimal. This takes into account the change in heading direction due to turns and also the change in speed due to acceleration/braking. 
+	4. The vehicle must drive safely and should not exceed the speed limit. In contrast, the vehicle must also not drive too slow as one wouldn't reach any place.
 
-* **Ipopt and CppAD:** Please refer to [this document](https://github.com/udacity/CarND-MPC-Project/blob/master/install_Ipopt_CppAD.md) for installation instructions.
-* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
-* Simulator. You can download these from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases).
-* Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
+These constraints are merged to form a cost function. MPC tries to reduce the cost function and come up with the values of actuation inputs to the vehicle, which can be the steering angle of the wheel and/or the throttle/brake magnitude.
+
+## Goal
+In this project, MPC was implemented to drive a car around a circular track having sharp left and right turns. A good solution would help the car stay in the center portion of the lane and take smooth left and right turns without touching or running over the edges of the lane (considered as risky in case humans were travelling in such a car). Also, the final implementation had to be tested with speeds as high as 80-100mph and note down the behavior of the car.
+
+## Project Implementation
+Simulation of a circular track was achieved in the Udacity's self driving car simulator. While MPC was implmented in C++, the simulator communicated to C++ code with the help of uWebSockets library. Following parameters were received from the simulator for each communication:
+
+1. List of waypoints with x and y coordinates of each point in global map system. These waypoints represent the suggested trajectory for the car from current position to few distance ahead of it. Such type of information is usually received from a Path Planning Module implemented in self-driving vehicles. The path planning module generates reference trajectory for a section of the total journey based on the current location of the vehicle.
+2. The current position and heading of car in global map system.
+3. The current steering angle and throttle applied to the car.
+4. The current speed of the car.
 
 
-## Basic Build Instructions
+The final implementation consisted of following major steps:
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+#### 1. Align of data relative to the motion of car:
+In this step, the coordinates of waypoints were transformed from global map system to vehicle's coordinate system. This was done to ensure the calculations of cte and epsi were less complex and involved less calculations. An overview of global map coordinate system and local vehicle system coordinate system is shown below:
+    
+![png](global-map.png)
 
-## Tips
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.)
-4.  Tips for setting up your environment are available [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
-5. **VM Latency:** Some students have reported differences in behavior using VM's ostensibly a result of latency.  Please let us know if issues arise as a result of a VM environment.
+#### 2. Generation of reference trajectory from waypoints:
+The transformed coordinates of waypoints were then used to create a smooth curved trajectory, which will act as a reference for motion of the car. This is done by using polynomial fitting or regression technique. In this technique, discrete points are fitted to a polynomial of desired degree in order to obtain the relation function between x and y coordinates, also known as the curve equation. In this project, the waypoints coordinates were fitted to a 3rd degree polynomial. A smooth curve was drawn inside the scene in the simulator shown by yellow line in the screen cap below:
 
-## Editor Settings
+![png](waypoints_curve.png)
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+#### 3. Calculation of CTE and EPSI:
+As a result of transformation of data in step 1, the calculation of cte was a linear function and the calculation of epsi involved taking arctangent of the first order coefficient of fitting polynomial. The formulae are given below:
+    
+![png](cte-formula.png)
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+![png](epsi-formula.png)
 
-## Code Style
+#### 4. Definition of motion model, control/actuator inputs and state update equations:
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+The motion model in this project was based on the Kinematic equations of motion in 2 dimensions.
 
-## Project Instructions and Rubric
+![png](kinematic-state-update-equations.png)
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+The actuator inputs used to control the car are given below: 
+1. The magnitude of steering (delta). This was limited to [-25, 25] as per the angle specification of simulator. 
+2. The magnitude of throttle (a). This was limited to [-1, 1] as per the throttle/brake specification of simulator.
 
-## Hints!
+#### 5. Definition of time step length (N) and duration between time steps (dt):
+ Higher value of N ensures more number of estimates while higher value of dt ensures the estimates are closer in time. Different combinations are tried to achieve Na dn dt value mentioned below:
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+N and dt                                 Observation
+N=10,dt=0.1                              At turns car took sharp turns, less number of dicrete points.
+N=7,dt=0.07                              Perfect combination for car movement for the track provided to complete this project. This configuration works well with 90MPH and moderate with 100MPH.
 
-## Call for IDE Profiles Pull Requests
 
-Help your fellow students!
+After trial and error, N=7 and dt=0.07 means MPC algorithm predicts future for (7*.07 = 500ms) and it is drawn inside simulator with Green color.
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+#### 6. Definition of desired behavior and actuator constraints:
+In order to define the cost function of the system, it was essential to list down the desired values of different parameters. They are given below:
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+1. Expected value of CTE to be zero
+2. Expect value of EPSI to be zero
+3. Maximum speed of the car to be in between 80-100mph. This was a tunable parameter and the goal was to test the maximum speed at which the car stays on the track and moves safely.
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+#### 7. Definition of cost function for MPC:
+Key elements and features of the cost function are given below:
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+1. Highest weight for calculated CTE and EPSI. This was to ensure the car stays in the middle of lane and head in desired direction.
+2. Reduce high initial values of control inputs (delta and a) to ensure there is no jerk in motion of the car.
+3. Minimize the change in values of control inputs (delta and a) in order to minimize oscillations in the motion
+4. Minimize speeds at higher steering angle and minimize steering at higher speeds.
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+#### 8. Incorporating effect of latency in the control actuations:
+Simulator introduces latency of 100ms. This delay caused control actuations to reach the car in later of time.This will work fine for low speed but resulted in undesired behavior at high speeds.
+To account latency effect, the state parameter for next state were calculated beforehand and were sent to MPC for generating steering and throttle values(i.e. Predictnextstate() function is implemented for this).This ensured the actuations applied at current point of time were actually for the next time step (i.e. after 100 ms).
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+## Project Output
+MPC used to derive the steering angles and throttle/brake for a car moving on a circular track was implemented successfully. Output video is attached named "Output_video.mp4"
