@@ -6,10 +6,10 @@ Self-Driving Car Engineer Nanodegree Program
 MPC is a non-linear system which generates optimized parameters with the constraint of obtaining minimal value of cost function. Here, cost function refers to the problem built by taking into consideration the model of the system, range of inputs, limitations on outputs and/or the effect of external factors acting on the system.
 
 A typical cost function in case of a self-driving vehicle will have following constraints:
-	1. The cross track error (cte), i.e. the distance of vehicle from the center of the lane must be minimal.
-	2. The heading direction of the vehicle must be close to perpendicular to the lane. Error PSI (epsi) is the error in heading direction.
-	3. Oscillations while riding the vehicle must be minimal. This takes into account the change in heading direction due to turns and also the change in speed due to acceleration/braking. 
-	4. The vehicle must drive safely and should not exceed the speed limit. In contrast, the vehicle must also not drive too slow as one wouldn't reach any place.
+1. The cross track error (cte), i.e. the distance of vehicle from the center of the lane must be minimal.
+2. The heading direction of the vehicle must be close to perpendicular to the lane. Error PSI (epsi) is the error in heading direction.
+3. Oscillations while riding the vehicle must be minimal. This takes into account the change in heading direction due to turns and also the change in speed due to acceleration/braking. 
+4. The vehicle must drive safely and should not exceed the speed limit. In contrast, the vehicle must also not drive too slow as one wouldn't reach any place.
 
 These constraints are merged to form a cost function. MPC tries to reduce the cost function and come up with the values of actuation inputs to the vehicle, which can be the steering angle of the wheel and/or the throttle/brake magnitude.
 
@@ -60,8 +60,8 @@ The actuator inputs used to control the car are given below:
  Higher value of N ensures more number of estimates while higher value of dt ensures the estimates are closer in time. Different combinations are tried to achieve Na dn dt value mentioned below:
 
 N and dt                                 Observation
-N=10,dt=0.1                              At turns car took sharp turns, less number of dicrete points.
-N=7,dt=0.07                              Perfect combination for car movement for the track provided to complete this project. This configuration works well with 90MPH and moderate with 100MPH.
+1. N=10,dt=0.1                              At turns car took sharp turns, less number of dicrete points.
+2. N=7,dt=0.07                              Perfect combination for car movement for the track provided to complete this project.  This configuration works well till 90MPH and moderate execution with 100MPH.
 
 
 After trial and error, N=7 and dt=0.07 means MPC algorithm predicts future for (7*.07 = 500ms) and it is drawn inside simulator with Green color.
