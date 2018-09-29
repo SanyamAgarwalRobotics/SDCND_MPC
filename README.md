@@ -87,4 +87,4 @@ Simulator introduces latency of 100ms. This delay caused control actuations to r
 To account latency effect, the state parameter for next state were calculated beforehand and were sent to MPC for generating steering and throttle values(i.e. Predictnextstate() function is implemented for this).This ensured the actuations applied at current point of time were actually for the next time step (i.e. after 100 ms).
 
 ## Project Output
-MPC used to derive the steering angles and throttle/brake for a car moving on a circular track was implemented successfully. Output video is attached named "Output_video.mp4"
+MPC used to derive the steering angles and throttle/brake for a car moving on a circular track was implemented successfully. Output video is attached named "Output_video.mp4". The ouptut video i atatched with 80mph but the solution works well till 90mph.
